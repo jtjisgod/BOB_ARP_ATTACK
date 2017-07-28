@@ -2,6 +2,12 @@
 #include <stdio.h>
 #include <pcap/pcap.h>
 
+typedef struct etherhdr{
+  char dstMac[6];
+  char srcMac[6];
+  char etherType[2];
+} ETHERHDR;
+
 void main(int argc, char **argv)
 {
     pcap_t *handle;					/* Session handle */
@@ -25,30 +31,17 @@ void main(int argc, char **argv)
     if (pcap_setfilter(handle, &fp) == -1) { fprintf(stderr, "Couldn't install filter %s: %s\n", filter_exp, pcap_geterr(handle)); return(2); }
   /*}*/
 
-
-    /* Supposing to be on ethernet, set mac destination to 1:1:1:1:1:1 */
-    packet[0]=1;
-    packet[1]=1;
-    packet[2]=1;
-    packet[3]=1;
-    packet[4]=1;
-    packet[5]=1;
-
-    /* set mac source to 2:2:2:2:2:2 */
-    packet[6]=2;
-    packet[7]=2;
-    packet[8]=2;
-    packet[9]=2;
-    packet[10]=2;
-    packet[11]=2;
+    ETHERHDR eh;
+    strcpy(eh.dstMac, "AAAAAA");
+    strcpy(eh.srcMac, "\x01\x01\x01\x01\x01\x01");
+    strcpy(eh.etherType, "\x08\x06");
 
     int i;
 
-    /* Fill the rest of the packet */
-    for(i=12;i<100;i++)
-    {
-        packet[i]=i%256;
-    }
+    printf("%s\n", eh.dstMac);
+
+    memset(packet, 0x00, 100);
+    memcpy(packet, (void *)&eh, sizeof(eh));
 
     pcap_sendpacket(handle, packet, sizeof(packet));
 
