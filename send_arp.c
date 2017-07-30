@@ -44,13 +44,12 @@ void main(int argc, char **argv)
     ARPHDR sendHdr;
 
     // u_char dstMac[7] = "\x00\x50\x56\xc0\x00\x08";
-    u_char dstMac[7] = "\xe4\x42\xa6\xa1\xa7\x98";
-    u_char srcMac[7] = "\x00\x0c\x29\x15\xef\x90";
+    u_char dstMac[7] = "\x00\x50\x56\x25\x0c\xca";
+    u_char srcMac[7] = "\x00\x50\x56\x25\x0c\xca";
 
     memcpy(sendHdr.eh.dstMac, dstMac, 6);
     memcpy(sendHdr.eh.srcMac, srcMac, 6);
     memcpy(sendHdr.eh.etherType, "\x08\x06", 2); // ARP
-
 
     memcpy(sendHdr.ht, "\x00\x01", 2);
     memcpy(sendHdr.pt, "\x08\x00", 2);
@@ -59,12 +58,9 @@ void main(int argc, char **argv)
     memcpy(sendHdr.op, "\x00\x02", 2);
 
     memcpy(sendHdr.sha, dstMac, 6);
-    memcpy(sendHdr.spa, "\xc0\xa8\xee\x82", 4); //C0A8EE82
+    memcpy(sendHdr.spa, "\xc0\xa8\xd5\x05", 4); //C0A8EE82
     memcpy(sendHdr.dha, srcMac, 6);
-    memcpy(sendHdr.dpa, "\xc0\xa8\xee\x82", 4);
-
-
-    int i;
+    memcpy(sendHdr.dpa, "\xc0\xa8\xd5\x05", 4);
 
     memset(packet, 0x00, 100);
     memcpy(packet, (void *)&sendHdr, sizeof(sendHdr));
