@@ -58,7 +58,7 @@ void main(int argc, char **argv)
     char* target;
 
     if(argc != 4)   {
-        printf("\n\nUsage : %s [network] [victim] [target]\n\n");
+        printf("\n\nUsage : %s [network] [Sender] [target]\n\n");
         return 2;
     }
 
