@@ -32,7 +32,8 @@ void main(int argc, char **argv)
     struct pcap_pkthdr header;		/* The header that pcap gives us */
     u_char packet[100];			/* The actual packet */
 
-    dev = pcap_lookupdev(errbuf);
+    
+    dev = argv[1];
 
   /* Error 제어 { */
     if (dev == NULL) { fprintf(stderr, "Couldn't find default device: %s\n", errbuf); return(2); }
@@ -44,8 +45,8 @@ void main(int argc, char **argv)
     ARPHDR sendHdr;
 
     // u_char dstMac[7] = "\x00\x50\x56\xc0\x00\x08";
-    u_char dstMac[7] = "\x00\x50\x56\x25\x0c\xca";
-    u_char srcMac[7] = "\x00\x50\x56\x25\x0c\xca";
+    u_char srcMac[7] = "\xf4\x8c\x50\x8c\xda\xc0";
+    u_char dstMac[7] = "\xe4\x42\xa6\xa1\xfb\x08";
 
     memcpy(sendHdr.eh.dstMac, dstMac, 6);
     memcpy(sendHdr.eh.srcMac, srcMac, 6);
@@ -57,10 +58,10 @@ void main(int argc, char **argv)
     memcpy(sendHdr.pal, "\x04", 1);
     memcpy(sendHdr.op, "\x00\x02", 2);
 
-    memcpy(sendHdr.sha, dstMac, 6);
-    memcpy(sendHdr.spa, "\xc0\xa8\xd5\x05", 4); //C0A8EE82
-    memcpy(sendHdr.dha, srcMac, 6);
-    memcpy(sendHdr.dpa, "\xc0\xa8\xd5\x05", 4);
+    memcpy(sendHdr.sha, srcMac, 6);
+    memcpy(sendHdr.spa, "\xc0\xa8\x20\xfe", 4); //C0A8EE82
+    memcpy(sendHdr.dha, dstMac, 6);
+    memcpy(sendHdr.dpa, "\xc0\xa8\x20\x01", 4);
 
     memset(packet, 0x00, 100);
     memcpy(packet, (void *)&sendHdr, sizeof(sendHdr));
