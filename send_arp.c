@@ -60,6 +60,10 @@ void main(int argc, char **argv)
   /*}*/
 
 
+
+
+  // 맥 주소 받기
+  // 성경이 누나에게 받은 부분
     int fd;
     struct ifreq ifr;
     struct ether_header *ETH;
@@ -73,6 +77,9 @@ void main(int argc, char **argv)
     u_int8_t my_mac[ETH_ALEN];
     memcpy(my_mac, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
     close(fd);
+  // 끝
+
+
 
     ARPHDR sendHdr;
 
